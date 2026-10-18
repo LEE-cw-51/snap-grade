@@ -1,0 +1,8 @@
+- generic [active] [ref=e1]:
+  - main [ref=e15]:
+    - link "← 홈" [ref=e16] [cursor=pointer]:
+      - /url: /
+    - heading "정답지 등록" [level=1] [ref=e17]
+    - paragraph [ref=e18]: HWP는 PDF로 저장해서 올려주세요. (mock 비전은 파일 내용과 무관하게 샘플 정답을 반환합니다)
+    - generic [ref=e19] [cursor=pointer]: 사진 / 파일 선택
+  - alert [ref=e20]

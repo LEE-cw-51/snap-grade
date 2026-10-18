@@ -1,0 +1,25 @@
+- generic [active] [ref=f1e1]:
+  - main [ref=f1e3]:
+    - link "← 홈" [ref=f1e4] [cursor=pointer]:
+      - /url: /
+    - heading "연속 채점" [level=1] [ref=f1e5]
+    - generic [ref=f1e6]:
+      - generic [ref=f1e7]: 학습지
+      - combobox "학습지" [ref=f1e8]:
+        - option "1일차 연산" [selected]
+        - option "1일차 연산"
+    - generic [ref=f1e9]:
+      - generic [ref=f1e10]: 학생
+      - combobox "학생" [ref=f1e11]:
+        - option "김민수 · 초4-A"
+        - option "이서연 · 초4-A" [selected]
+    - generic [ref=f1e12] [cursor=pointer]: 촬영 / 업로드
+    - paragraph [ref=f1e13]: 업로드 직후 다음 학생을 찍을 수 있습니다. 채점은 백그라운드에서 진행됩니다.
+    - list [ref=f1e14]:
+      - listitem [ref=f1e15]:
+        - generic [ref=f1e16]:
+          - strong [ref=f1e17]: 김민수
+          - generic [ref=f1e18]: 채점 중
+    - link "반별 결과 목록" [ref=f1e19] [cursor=pointer]:
+      - /url: /results/89864375-c8ad-46d9-9efa-a015d2e6651c
+  - alert [ref=f1e20]

@@ -1,0 +1,7 @@
+[    3352ms] [WARNING] The resource http://127.0.0.1:3000/_next/static/chunks/9a50fc61aed0cc5a.css was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://127.0.0.1:3000/:0
+[   36146ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:3000/api/submissions/4132c1b1-ace7-4de9-b5a5-8f281038217a:0
+[   36149ms] TypeError: Failed to fetch
+    at http://127.0.0.1:3000/_next/static/chunks/74dd029505053177.js:1:9526
+    at http://127.0.0.1:3000/_next/static/chunks/74dd029505053177.js:1:9830
+[   38165ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:3000/api/submissions/4132c1b1-ace7-4de9-b5a5-8f281038217a:0
+[   40151ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:3000/api/submissions/4132c1b1-ace7-4de9-b5a5-8f281038217a:0
