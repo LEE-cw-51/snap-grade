@@ -43,6 +43,10 @@ venv/
 # playwright
 playwright-report/
 test-results/
+.playwright-mcp/
+
+# local demo screenshots
+/*.png
 
 # vercel
 .vercel
