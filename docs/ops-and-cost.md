@@ -20,6 +20,60 @@
 
 **실운영 최소 고정비 대략:** Supabase Pro $25 + (상용이면) Vercel Pro $20 ≈ **$45/월** + Claude 사용량.
 
+**돈 0원 실험:** 가능하다. 아래 [§0 $0 실험 경로](#0-0원-실험-경로) — 비전은 mock, 나머지는 Free/로컬.
+
+---
+
+## 0. $0 실험 경로
+
+카드·유료 플랜 없이 **제품 로직·UI·잡 흐름까지** 검증할 수 있다. 막히는 지점은 오직 **실제 손글씨 Vision**이다.
+
+### 0.1 완전 $0 (추천 — 개발 초기)
+
+| 구성 | 선택 | 비용 |
+|---|---|---|
+| 앱 | 로컬 `next dev` | $0 |
+| DB·Auth·Storage | **Supabase CLI 로컬** (Docker) 또는 Free 프로젝트 | $0 |
+| 호스팅 | 배포 안 함, 또는 Vercel Hobby (개인 실험) | $0 |
+| 판정 | 로컬 Python + pytest / 로컬 SymPy 엔드포인트 | $0 |
+| 비전 | **`VisionReader` mock** — fixture JSON 반환 | $0 |
+| E2E | Playwright + 테스트 이미지 + mock | $0 |
+
+이 구성으로 가능한 것:
+
+- SymPy 12장 단위 테스트 전부
+- 정답지 확인·수정·저장 UI (추출 결과는 fixture)
+- 연속 촬영 → `grading_jobs` → 폴링 → 결과·`?` 판정 UX
+- 원본 삭제·한도·프리셋 등 비즈니스 규칙
+
+이 구성으로 **못 하는 것:**
+
+- 실제 학습지 사진 인식 정확도 측정 (게이트)
+
+환경변수 예: `VISION_PROVIDER=mock` (기본값). 실키 없으면 Claude를 호출하지 않는다.
+
+### 0.2 거의 $0 (실사진 몇 장만)
+
+| 구성 | 선택 |
+|---|---|
+| 인프라 | Supabase Free + Vercel Hobby / 로컬 |
+| Claude | 콘솔 신규 계정 **일회성 starter credit**(금액·조건은 Anthropic이 고지하는 대로; **상시 free tier 없음**) |
+| 가드 | 카드 미등록 유지, credit 소진 후 자동 과금 안 되게 확인. 일일 한도 5~10장 |
+
+실사진 10~20장 게이트만 credit로 돌리고, 일상 개발은 다시 mock으로 되돌린다.
+
+### 0.3 Free 티어 주의
+
+- Supabase Free: **7일 미사용 시 pause** — 주 1회 접속하거나 로컬 Supabase 쓰기
+- Vercel Hobby: **non-commercial / personal** — 돈 받는 서비스로 쓰면 Pro
+- Claude: 상시 무료 할당량 없음. mock이 $0의 본체
+
+### 0.4 언제 돈을 쓰기 시작하나
+
+1. mock으로 UI·판정·잡이 안정된 뒤  
+2. 실사진 정확도를 재고 싶을 때 → Claude credit 또는 소액 충전  
+3. 실제 학생을 매일 넣을 때 → Supabase Pro (+ 필요 시 Vercel Pro)
+
 ---
 
 ## 2. 비용이 나는 곳 (중요도 순)
@@ -178,15 +232,14 @@ Claude만으로 `?` 비율·오판 게이트를 통과하면 **영구히 불필�
 ## 5. 현실적 도입 순서 (돈 쓰는 순서)
 
 ```
-1) Anthropic 키 + spend limit          ← 개발 중 소액
-2) Supabase Free + Vercel Hobby        ← 개발·데모
-3) 샘플 채점으로 Claude 단가 실측       ← 한도 숫자 확정
-4) 실학생 들어가기 직전:
-     Supabase Pro + (상용/안정) Vercel Pro
-5) 정확도 게이트 미달 시에만 Mathpix
+0) 로컬 + Vision mock + (로컬/Free) Supabase   ← $0로 개발·E2E
+1) (선택) Claude starter credit로 샘플 10~20장만 게이트
+2) 카드·spend limit 후 소액으로 단가 실측
+3) 실학생 직전: Supabase Pro + (상용/안정) Vercel Pro
+4) 게이트 미달 시에만 Mathpix
 ```
 
-**지금 카드 등록이 필요한 것:** Anthropic(종량).  
+**지금 당장 카드 필요 없음.** mock으로 시작한다.  
 **실운영 직전:** Supabase Pro, 필요 시 Vercel Pro.  
 **나중:** Mathpix, 도메인, 알림톡.
 
