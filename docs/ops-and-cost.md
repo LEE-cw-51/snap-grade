@@ -12,7 +12,7 @@
 |---|---|---|
 | 호스팅 | **Vercel Hobby**로 시작 → 상용·긴 채점 필요 시 **Pro ($20/월)** | Hobby는 non-commercial 제한·함수 300초 상한 |
 | DB·Auth·Storage | **Supabase Free**로 개발·파일럿 → 실운영 전 **Pro ($25/월)** | Free는 1주 미사용 시 pause, 백업·운영 안정성 부족 |
-| 비전 AI | **Claude Sonnet** (환경변수로 모델명) | 손글씨+레이아웃에 필요. 비용의 대부분 |
+| 비전 AI | **`VisionReader` 멀티 프로바이더** (기본 실험: Gemini Free → 실운영은 게이트 승자) | Claude 고정 아님. 아래 §2.0 |
 | 판정 엔진 | **SymPy on Vercel Python Function** | 추가 SaaS 요금 없음 |
 | 2차 OCR | **Mathpix는 게이트 미달 전까지 가입하지 않음** | 셋업비+$0.002/장. 필요할 때만 |
 | 잡 큐 | **없음** (`grading_jobs` + `after()` + 폴링) | Inngest 등 월정액 절약 |
@@ -52,56 +52,87 @@
 
 환경변수 예: `VISION_PROVIDER=mock` (기본값). 실키 없으면 Claude를 호출하지 않는다.
 
-### 0.2 거의 $0 (실사진 몇 장만)
+### 0.2 거의 $0 (실사진 실험)
 
 | 구성 | 선택 |
 |---|---|
 | 인프라 | Supabase Free + Vercel Hobby / 로컬 |
-| Claude | 콘솔 신규 계정 **일회성 starter credit**(금액·조건은 Anthropic이 고지하는 대로; **상시 free tier 없음**) |
-| 가드 | 카드 미등록 유지, credit 소진 후 자동 과금 안 되게 확인. 일일 한도 5~10장 |
+| 비전 1순위 | **Gemini API Free (Flash)** — 실사진 게이트용. 학생 이름 가린 샘플만 |
+| 비전 대안 | Claude starter credit / OpenRouter `:free` VL (한도·불안정) |
+| 가드 | 일일 한도 5~10장. Gemini Free rate limit 초과 시 대기 |
 
-실사진 10~20장 게이트만 credit로 돌리고, 일상 개발은 다시 mock으로 되돌린다.
+일상 개발은 `mock`, 정확도 측정 세션만 Gemini Free.
 
 ### 0.3 Free 티어 주의
 
 - Supabase Free: **7일 미사용 시 pause** — 주 1회 접속하거나 로컬 Supabase 쓰기
 - Vercel Hobby: **non-commercial / personal** — 돈 받는 서비스로 쓰면 Pro
-- Claude: 상시 무료 할당량 없음. mock이 $0의 본체
+- Gemini Free: 쿼터·RPM 제한. **입력이 제품 개선에 사용될 수 있음** → 실명 숙제 넣지 말 것
+- Claude: 상시 free tier 없음
 
 ### 0.4 언제 돈을 쓰기 시작하나
 
 1. mock으로 UI·판정·잡이 안정된 뒤  
-2. 실사진 정확도를 재고 싶을 때 → Claude credit 또는 소액 충전  
-3. 실제 학생을 매일 넣을 때 → Supabase Pro (+ 필요 시 Vercel Pro)
+2. Gemini Free로 샘플 게이트 → 필요하면 Claude/유료와 A/B  
+3. 실제 학생을 매일 넣을 때 → Supabase Pro + 비전 **Paid(데이터 비학습)** + 필요 시 Vercel Pro
 
 ---
 
 ## 2. 비용이 나는 곳 (중요도 순)
 
-### 2.1 Claude Vision API — **최대 비용 드라이버**
+### 2.0 비전 모델 — Claude만이 아니다
 
-채점·정답지 추출마다 이미지+프롬프트+JSON 출력이 토큰으로 과금된다.
+판정은 SymPy가 하고, 비전은 **읽기만** 한다. 프로바이더는 환경변수로 갈아끼운다.
+
+```
+VISION_PROVIDER=mock|gemini|claude|openai|openrouter
+VISION_MODEL=...          # 예: gemini-2.5-flash, claude-sonnet-..., gpt-4o-mini
+```
+
+| 프로바이더 | 실험($0에 가깝게) | 실운영 후보 | 이 제품에 맞는 점 | 주의 |
+|---|---|---|---|---|
+| **Mock** | 기본 | — | UI·잡·SymPy 검증 | 정확도 측정 불가 |
+| **Gemini Flash** (Google AI) | **Free tier로 실사진 가능** | 1순위 후보 | 손글씨 벤치에서 강함, 장당 단가 낮음 | Free는 rate limit. **Free 데이터는 제품 개선에 쓰일 수 있음** → 학생 이름 가리거나, 실서비스는 Paid |
+| **Claude Sonnet** | starter credit만 | 게이트에서 Gemini 질 때 | JSON·지시 따르기 안정적 | 상시 free 없음, 장당 비쌈 |
+| **OpenAI** (4o-mini / 상위) | 거의 없음 | 보조 후보 | Structured Outputs 편함 | mini는 손글씨·수식에 약할 수 있음. 상위는 비용↑ |
+| **OpenRouter `:free` VL** | 하루 수십 장 한도 | 비추천 | Qwen-VL 등 공짜 실험 | 한도·가용성 불안정, 로그/학습 정책 제각각 |
+| **Mathpix** | 셋업비 | `?`/근호만 2차 | 수식 OCR 특화 | 전 장면에 쓰면 이중 비용 |
+| 로컬 VL (Ollama 등) | GPU 있으면 $0 | MVP 비추 | 오프라인 | 휴대폰 웹 서버리스와 안 맞음 |
+
+**추천 운영 정책**
+
+1. 개발: `mock`  
+2. 실사진 파일럿($0): **`gemini` + Free Flash** (이름 가린 샘플만)  
+3. 게이트(샘플 10~20장): Gemini vs Claude(또는 OpenAI) **같은 프롬프트·스키마**로 `?` 비율·오판 비교 → 승자를 `VISION_PROVIDER` 기본값으로  
+4. 실학생: 승자 모델의 **유료/데이터 비학습 티어** + 일일 한도  
+5. 게이트 미달 시에만 Mathpix를 낮은 confidence 문항에 추가  
+
+브랜드를 기획서에 고정하지 말고, **게이트 숫자로 고른다.**
+
+### 2.1 비전 API 비용 — **가변 최대 드라이버**
+
+채점·정답지 추출마다 이미지+프롬프트+JSON 출력이 과금(또는 Free 쿼터)된다.
 
 | 항목 | 현실적 선택 |
 |---|---|
-| 모델 | **Sonnet** 계열을 기본 (`CLAUDE_VISION_MODEL`). Opus는 정확도 게이트에서 Sonnet이 부족할 때만 |
-| 이미지 | 업로드 전 **긴 변 1568px 이하로 리사이즈·JPEG 압축** (토큰·전송 절감, 품질은 초중등 손글씨에 충분) |
-| 호출 횟수 | 학습지 1페이지 = 비전 1회. PDF는 페이지당 1회 |
-| 재시도 | 실패 시 **1회만**. 동일 사진 무한 재호출 금지 |
-| 한도 | `DAILY_GRADE_LIMIT` (예: 80장/일), `MAX_PAGES_PER_SUBMISSION` (예: 2) |
+| 기본 실험 | Gemini Flash Free (`VISION_PROVIDER=gemini`) |
+| 유료 기본 | 게이트 승자. 동률이면 **더 싼 쪽**(보통 Gemini Flash Paid) |
+| 이미지 | 업로드 전 **긴 변 1568px 이하·JPEG 압축** |
+| 호출 | 학습지 1페이지 = 비전 1회. PDF는 페이지당 1회 |
+| 재시도 | 실패 시 **1회만** |
+| 한도 | `DAILY_GRADE_LIMIT`, `MAX_PAGES_PER_SUBMISSION` |
+| 콘솔 | 쓰는 벤더마다 **spend / rate limit** 설정 |
 
-**월 사용량 감(대략, Sonnet 기준·변동 큼):**
+**월 사용량 감 (유료일 때, 모델별 편차 큼):**
 
-가정: 숙제 사진 1장 ≈ 이미지 토큰 ~1.5k + 프롬프트·출력 ~3–6k → **대략 $0.01–0.04/장** 수준으로 잡고 시작 (모델·해상도·문항 수에 따라 달라짐).
+| 시나리오 | 월 채점 장수 | Gemini Flash Paid 감 | Claude Sonnet 감 |
+|---|---|---|---|
+| 파일럿 ~120장 | 120 | 대개 **수 달러 이하** | **수 달러** |
+| 공부방 ~400장 | 400 | **수~$15** | **$10–20대** |
+| 바쁜 달 ~1000장 | 1000 | **~$10–25** | **$20–50대** |
 
-| 시나리오 | 월 채점 장수 | Claude 대략 |
-|---|---|---|
-| 파일럿 (학생 10명 × 주 3회) | ~120장 | **수 달러** |
-| 소규모 공부방 (20명 × 주 5회) | ~400장 | **$10–20대** |
-| 바쁜 달 (40명 × 매일) | ~800–1200장 | **$20–50대** |
-
-정답지 등록은 월 수십 회 수준이라 상대적으로 작다.  
-**반드시:** Anthropic 콘솔에 **월 사용 한도(spend limit)** 설정.
+Gemini Free로 파일럿하면 비전 비용 **$0**(쿼터·개인정보 조건 하).  
+정답지 등록은 월 수십 회라 상대적으로 작다.
 
 ### 2.2 Supabase (DB + Auth + Storage)
 
@@ -175,7 +206,7 @@ Claude만으로 `?` 비율·오판 게이트를 통과하면 **영구히 불필�
 
 | 항목 | 비고 |
 |---|---|
-| Anthropic API 키 | 서버 전용. 클라이언트 노출 금지. 월 spend limit |
+| 비전 API 키 | `GEMINI_API_KEY` 및/또는 `ANTHROPIC_API_KEY` 등. 서버 전용. 벤더별 spend/rate limit |
 | Supabase URL / anon / **service role** | service role은 서버(채점 job·삭제 cron)만 |
 | Vercel 환경변수 | Production / Preview 분리. Preview에는 실키 최소화 |
 | `CLAUDE_VISION_MODEL`, `READ_CONFIDENCE_THRESHOLD` | 게이트 튜닝용 |
@@ -232,15 +263,15 @@ Claude만으로 `?` 비율·오판 게이트를 통과하면 **영구히 불필�
 ## 5. 현실적 도입 순서 (돈 쓰는 순서)
 
 ```
-0) 로컬 + Vision mock + (로컬/Free) Supabase   ← $0로 개발·E2E
-1) (선택) Claude starter credit로 샘플 10~20장만 게이트
-2) 카드·spend limit 후 소액으로 단가 실측
-3) 실학생 직전: Supabase Pro + (상용/안정) Vercel Pro
-4) 게이트 미달 시에만 Mathpix
+0) 로컬 + Vision mock + (로컬/Free) Supabase   ← $0 개발·E2E
+1) Gemini Free로 이름 가린 샘플 10~20장 게이트
+2) (선택) Claude/OpenAI와 같은 샘플 A/B → 승자 확정
+3) 실학생 직전: Supabase Pro + 비전 Paid + (상용) Vercel Pro
+4) 게이트 미달 시에만 Mathpix 2차
 ```
 
-**지금 당장 카드 필요 없음.** mock으로 시작한다.  
-**실운영 직전:** Supabase Pro, 필요 시 Vercel Pro.  
+**지금 당장 카드 필요 없음.** mock → Gemini Free.  
+**실운영 직전:** Paid 비전(개인정보) + Supabase Pro.  
 **나중:** Mathpix, 도메인, 알림톡.
 
 ---
@@ -259,8 +290,10 @@ Claude만으로 `?` 비율·오판 게이트를 통과하면 **영구히 불필�
 
 ## 7. 추천 구성 요약
 
-**개발·파일럿:** Vercel Hobby + Supabase Free + Claude Sonnet + SymPy + 잡 테이블 폴링  
+**개발:** 로컬/Hobby + Supabase Free/로컬 + `VISION_PROVIDER=mock` + SymPy  
 
-**실운영(1인 강사):** Vercel Pro + Supabase Pro + Claude Sonnet(리사이즈·일일 한도) + SymPy + cron 삭제 + 콘솔 spend cap  
+**실사진 파일럿($0):** 위 + **Gemini Flash Free** (이름 가림) + 게이트  
 
-**보류:** Mathpix, 외부 큐, 알림톡, 유료 모니터링, 별도 Python 호스트
+**실운영:** Vercel Pro + Supabase Pro + **게이트 승자 비전 Paid** (동률·비용이면 Gemini Flash) + SymPy + cron + spend/rate limit  
+
+**보류:** Mathpix(전량), 외부 큐, 알림톡, 로컬 GPU VL, Claude 고정 의존
