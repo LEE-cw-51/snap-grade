@@ -4,6 +4,7 @@ import katex from "katex";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { PRESET_OPTIONS, suggestPresetFromHints } from "@/lib/form-presets";
+import { resizeImageFile } from "@/lib/image/resize-client";
 import "katex/dist/katex.min.css";
 
 type Section = {
@@ -49,8 +50,16 @@ export default function AnswerKeyPage() {
         setError("HWP는 지원하지 않습니다. PDF로 저장한 뒤 올려주세요.");
         return;
       }
+      let upload: Blob = file;
+      if (file.type.startsWith("image/")) {
+        const dataUrl = await resizeImageFile(file, {
+          maxEdge: 1568,
+          quality: 0.85,
+        });
+        upload = await (await fetch(dataUrl)).blob();
+      }
       const fd = new FormData();
-      fd.append("file", file);
+      fd.append("file", upload, file.name);
       const res = await fetch("/api/answer-key/extract", {
         method: "POST",
         body: fd,

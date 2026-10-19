@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { resizeImageFile } from "@/lib/image/resize-client";
 
 type Worksheet = { id: string; title: string; sectionLabel: string };
 type Student = { id: string; name: string; className: string };
@@ -38,17 +39,30 @@ export default function GradePage() {
     setUploading(true);
     setHint("");
     try {
-      const dataUrl = await fileToDataUrl(file);
+      const dataUrl = await resizeImageFile(file, {
+        maxEdge: 1568,
+        quality: 0.85,
+      });
       const studentName =
         students.find((s) => s.id === studentId)?.name || "";
       const res = await fetch("/api/submissions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ worksheetId, studentId, photoDataUrl: dataUrl }),
+        body: JSON.stringify({
+          worksheetId,
+          studentId,
+          photoDataUrl: dataUrl,
+          pageCount: 1,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
-        setHint(data.error === "daily limit" ? "오늘 채점 한도입니다. 내일 다시 시도하세요." : data.error || "업로드 실패");
+        setHint(
+          data.message ||
+            (data.error === "daily_limit"
+              ? "오늘 채점 한도입니다. 내일 다시 시도하세요."
+              : data.error || "업로드 실패"),
+        );
         return;
       }
       setQueue((q) => [
@@ -245,11 +259,3 @@ function statusLabel(s: string) {
   }
 }
 
-function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}

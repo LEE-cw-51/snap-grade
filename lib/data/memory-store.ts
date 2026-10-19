@@ -166,6 +166,28 @@ export function listSubmissionsForWorksheet(worksheetId: string) {
   return store().submissions.filter((s) => s.worksheetId === worksheetId);
 }
 
+export function countTodaySubmissions(teacherId: string) {
+  const today = new Date().toISOString().slice(0, 10);
+  return store().submissions.filter(
+    (s) => s.teacherId === teacherId && s.createdAt.startsWith(today),
+  ).length;
+}
+
+/** Reject enqueue while the same student+worksheet is still grading. */
+export function findActiveSubmission(
+  worksheetId: string,
+  studentId: string,
+) {
+  return (
+    store().submissions.find(
+      (s) =>
+        s.worksheetId === worksheetId &&
+        s.studentId === studentId &&
+        (s.status === "uploaded" || s.status === "grading"),
+    ) ?? null
+  );
+}
+
 export function getJobForSubmission(submissionId: string) {
   return (
     store()

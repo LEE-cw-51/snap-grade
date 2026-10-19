@@ -22,7 +22,7 @@ export async function runGradingJob(submissionId: string): Promise<void> {
   const job = getJobForSubmission(submissionId);
   if (!submission || !job) return;
 
-  if (job.attempts >= 2 && job.status === "failed") return;
+  if (job.attempts >= 2) return;
 
   updateJob(job.id, {
     status: "running",
@@ -115,6 +115,15 @@ export async function runGradingJob(submissionId: string): Promise<void> {
     flagKeyErrors(submission.worksheetId);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
+    const attempts = (getJobForSubmission(submissionId)?.attempts ?? 1);
+    if (attempts < 2) {
+      updateJob(job.id, {
+        status: "queued",
+        lastError: message,
+      });
+      await runGradingJob(submissionId);
+      return;
+    }
     updateJob(job.id, {
       status: "failed",
       lastError: message,

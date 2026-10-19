@@ -1,8 +1,10 @@
 import { after } from "next/server";
 import { NextResponse } from "next/server";
 import {
+  countTodaySubmissions,
   createSubmission,
   demoTeacherId,
+  findActiveSubmission,
   listSubmissionsForWorksheet,
 } from "@/lib/data/memory-store";
 import { runGradingJob } from "@/lib/grading/run-job";
@@ -19,28 +21,54 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   const daily = Number(process.env.DAILY_GRADE_LIMIT || "80");
+  const maxPages = Number(process.env.MAX_PAGES_PER_SUBMISSION || "2");
+  const teacherId = demoTeacherId();
   const body = await req.json();
-  const { worksheetId, studentId, photoDataUrl } = body as {
+  const { worksheetId, studentId, photoDataUrl, pageCount = 1 } = body as {
     worksheetId: string;
     studentId: string;
     photoDataUrl: string;
+    pageCount?: number;
   };
   if (!worksheetId || !studentId || !photoDataUrl) {
     return NextResponse.json({ error: "missing fields" }, { status: 400 });
   }
 
-  // Simple in-memory daily guard (demo)
-  const today = new Date().toISOString().slice(0, 10);
-  const count = listSubmissionsForWorksheet(worksheetId).filter((s) =>
-    s.createdAt.startsWith(today),
-  ).length;
-  // Count all teacher submissions roughly via worksheet list is imperfect; ok for demo.
-  if (count >= daily) {
-    return NextResponse.json({ error: "daily limit" }, { status: 429 });
+  const pages = Number(pageCount) || 1;
+  if (pages > maxPages) {
+    return NextResponse.json(
+      {
+        error: "page_limit",
+        message: `한 제출당 최대 ${maxPages}장까지입니다.`,
+        maxPages,
+      },
+      { status: 400 },
+    );
+  }
+
+  if (countTodaySubmissions(teacherId) >= daily) {
+    return NextResponse.json(
+      {
+        error: "daily_limit",
+        message: "오늘 채점 한도에 도달했습니다. 내일 다시 시도하세요.",
+        limit: daily,
+      },
+      { status: 429 },
+    );
+  }
+
+  if (findActiveSubmission(worksheetId, studentId)) {
+    return NextResponse.json(
+      {
+        error: "already_grading",
+        message: "이 학생은 아직 채점 중입니다. 완료 후 다시 올려 주세요.",
+      },
+      { status: 409 },
+    );
   }
 
   const { submission, job } = createSubmission({
-    teacherId: demoTeacherId(),
+    teacherId,
     worksheetId,
     studentId,
     photoDataUrl,
