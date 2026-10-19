@@ -256,14 +256,109 @@ export function flagKeyErrors(worksheetId: string) {
     }
     for (const [val, count] of computedCounts) {
       const ratio = count / subs.length;
-      if (
-        count >= 3 ||
-        ratio >= 0.3
-      ) {
+      if (count >= 3 || ratio >= 0.3) {
         if (val !== item.answerLatex) {
           item.keyErrorFlag = true;
         }
       }
     }
   }
+}
+
+export function listKeyErrorItems(worksheetId: string) {
+  return getAnswerItems(worksheetId).filter((a) => a.keyErrorFlag);
+}
+
+export function updateAnswerItemLatex(
+  itemId: string,
+  answerLatex: string,
+) {
+  const item = store().answerItems.find((a) => a.id === itemId);
+  if (!item) return null;
+  item.answerLatex = answerLatex;
+  item.keyErrorFlag = false;
+  return item;
+}
+
+/** Mark 24h warning; extend +7d once if open ? remain; delete expired photos. */
+export function sweepPhotoLifecycle(now = new Date()) {
+  const warned: string[] = [];
+  const extended: string[] = [];
+  const deleted: string[] = [];
+  const msDay = 24 * 3600 * 1000;
+
+  for (const sub of store().submissions) {
+    if (!sub.photoPath || !sub.photoDeleteAt) continue;
+    const deleteAt = new Date(sub.photoDeleteAt).getTime();
+    const openChecks = getItemResults(sub.id).filter(
+      (r) => r.autoVerdict === "CHECK" && !r.finalVerdict,
+    );
+
+    if (now.getTime() >= deleteAt) {
+      if (openChecks.length > 0 && !sub.photoDeleteWarnedAt) {
+        // Should have warned first; still extend once rather than wipe open ?
+        sub.photoDeleteAt = new Date(deleteAt + 7 * msDay).toISOString();
+        sub.photoDeleteWarnedAt = now.toISOString();
+        extended.push(sub.id);
+        continue;
+      }
+      if (
+        openChecks.length > 0 &&
+        sub.photoDeleteWarnedAt &&
+        deleteAt - new Date(sub.photoDeleteWarnedAt).getTime() < 8 * msDay
+      ) {
+        // Already extended once via warn path — allow delete to force re-shoot
+      }
+      deletePhoto(sub.photoPath);
+      sub.photoPath = null;
+      sub.photoDataUrl = null;
+      deleted.push(sub.id);
+      continue;
+    }
+
+    if (
+      !sub.photoDeleteWarnedAt &&
+      deleteAt - now.getTime() <= msDay
+    ) {
+      sub.photoDeleteWarnedAt = now.toISOString();
+      warned.push(sub.id);
+      if (openChecks.length > 0) {
+        sub.photoDeleteAt = new Date(deleteAt + 7 * msDay).toISOString();
+        extended.push(sub.id);
+      }
+    }
+  }
+
+  return { warned, extended, deleted };
+}
+
+/** Test helper: force photo_delete_at into the past/near future. */
+export function setPhotoDeleteAt(submissionId: string, iso: string) {
+  const s = getSubmission(submissionId);
+  if (!s) return null;
+  s.photoDeleteAt = iso;
+  return s;
+}
+
+export function listSubmissionsForTeacher(teacherId: string) {
+  return store().submissions.filter((s) => s.teacherId === teacherId);
+}
+
+export function enqueueRegrade(submissionId: string) {
+  const sub = getSubmission(submissionId);
+  if (!sub) return null;
+  const job: GradingJob = {
+    id: randomUUID(),
+    submissionId,
+    teacherId: sub.teacherId,
+    status: "queued",
+    attempts: 0,
+    lastError: null,
+    createdAt: new Date().toISOString(),
+    startedAt: null,
+    finishedAt: null,
+  };
+  store().gradingJobs.push(job);
+  updateSubmission(submissionId, { status: "uploaded" });
+  return job;
 }
