@@ -24,6 +24,10 @@ export async function POST(
     applyReasonToWorksheet?: boolean;
   };
 
+  if (!["O", "TRI", "X"].includes(verdict)) {
+    return NextResponse.json({ error: "invalid verdict" }, { status: 400 });
+  }
+
   const result = updateItemResult(resultId, {
     finalVerdict: verdict,
     resolvedAt: new Date().toISOString(),
@@ -32,14 +36,16 @@ export async function POST(
     return NextResponse.json({ error: "result not found" }, { status: 404 });
   }
 
-  if (applyReasonToWorksheet && result.reasonCode) {
+  if (applyReasonToWorksheet) {
     for (const r of getItemResults(id)) {
-      if (
-        r.id !== resultId &&
-        !r.finalVerdict &&
-        r.autoVerdict === "CHECK" &&
-        r.reasonCode === result.reasonCode
-      ) {
+      if (r.id === resultId || r.finalVerdict || r.autoVerdict !== "CHECK") {
+        continue;
+      }
+      // Same reason code when present; otherwise all open ? on this sheet.
+      const sameType = result.reasonCode
+        ? r.reasonCode === result.reasonCode
+        : true;
+      if (sameType) {
         updateItemResult(r.id, {
           finalVerdict: verdict,
           resolvedAt: new Date().toISOString(),
@@ -59,6 +65,8 @@ export async function POST(
       photoPath: null,
       photoDataUrl: null,
     });
+  } else {
+    updateSubmission(id, { status: "needs_review" });
   }
 
   return NextResponse.json({ result, open: open.length });

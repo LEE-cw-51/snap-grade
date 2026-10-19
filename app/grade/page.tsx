@@ -5,16 +5,20 @@ import { useEffect, useRef, useState } from "react";
 
 type Worksheet = { id: string; title: string; sectionLabel: string };
 type Student = { id: string; name: string; className: string };
+type QueueItem = {
+  studentName: string;
+  submissionId: string;
+  status: string;
+};
 
 export default function GradePage() {
   const [worksheets, setWorksheets] = useState<Worksheet[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [worksheetId, setWorksheetId] = useState("");
   const [studentId, setStudentId] = useState("");
-  const [queue, setQueue] = useState<{ studentName: string; submissionId: string; status: string }[]>(
-    [],
-  );
-  const [busy, setBusy] = useState(false);
+  const [queue, setQueue] = useState<QueueItem[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [hint, setHint] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -30,33 +34,40 @@ export default function GradePage() {
   }, []);
 
   async function upload(file: File) {
-    if (!worksheetId || !studentId) return;
-    setBusy(true);
-    const dataUrl = await fileToDataUrl(file);
-    const studentName = students.find((s) => s.id === studentId)?.name || "";
-    const res = await fetch("/api/submissions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ worksheetId, studentId, photoDataUrl: dataUrl }),
-    });
-    const data = await res.json();
-    setBusy(false);
-    if (!res.ok) {
-      alert(data.error || "업로드 실패");
-      return;
-    }
-    setQueue((q) => [
-      {
-        studentName,
-        submissionId: data.submission.id,
-        status: data.submission.status,
-      },
-      ...q,
-    ]);
-    // advance to next student for continuous capture (user taps shoot again)
-    const idx = students.findIndex((s) => s.id === studentId);
-    if (idx >= 0 && idx < students.length - 1) {
-      setStudentId(students[idx + 1].id);
+    if (!worksheetId || !studentId || uploading) return;
+    setUploading(true);
+    setHint("");
+    try {
+      const dataUrl = await fileToDataUrl(file);
+      const studentName =
+        students.find((s) => s.id === studentId)?.name || "";
+      const res = await fetch("/api/submissions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ worksheetId, studentId, photoDataUrl: dataUrl }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setHint(data.error === "daily limit" ? "오늘 채점 한도입니다. 내일 다시 시도하세요." : data.error || "업로드 실패");
+        return;
+      }
+      setQueue((q) => [
+        {
+          studentName,
+          submissionId: data.submission.id,
+          status: data.submission.status,
+        },
+        ...q,
+      ]);
+      const idx = students.findIndex((s) => s.id === studentId);
+      if (idx >= 0 && idx < students.length - 1) {
+        setStudentId(students[idx + 1].id);
+        setHint("다음 학생으로 넘어갔습니다. 바로 이어서 촬영하세요.");
+      } else {
+        setHint("업로드됨. 채점은 백그라운드에서 진행됩니다.");
+      }
+    } finally {
+      setUploading(false);
     }
   }
 
@@ -66,10 +77,15 @@ export default function GradePage() {
       const next = [...queue];
       let changed = false;
       for (let i = 0; i < next.length; i++) {
-        if (["done", "needs_review", "failed"].includes(next[i].status)) continue;
+        if (["done", "needs_review", "failed"].includes(next[i].status)) {
+          continue;
+        }
         const res = await fetch(`/api/submissions/${next[i].submissionId}`);
         const data = await res.json();
-        if (data.submission?.status && data.submission.status !== next[i].status) {
+        if (
+          data.submission?.status &&
+          data.submission.status !== next[i].status
+        ) {
           next[i] = { ...next[i], status: data.submission.status };
           changed = true;
         }
@@ -85,9 +101,24 @@ export default function GradePage() {
         ← 홈
       </Link>
       <h1 style={{ fontSize: 28, margin: "12px 0" }}>연속 채점</h1>
+      <p style={{ color: "#5a6570", marginTop: 0 }}>
+        업로드만 동기입니다. 채점이 끝나기 전에 다음 학생을 찍을 수 있습니다.
+      </p>
 
       {!worksheets.length ? (
-        <div className="panel">먼저 정답지를 등록하세요.</div>
+        <div className="panel">
+          먼저 정답지를 등록하세요.{" "}
+          <Link href="/answer-key" style={{ color: "var(--accent)", fontWeight: 700 }}>
+            정답지 등록
+          </Link>
+        </div>
+      ) : !students.length ? (
+        <div className="panel">
+          학생을 먼저 추가하세요.{" "}
+          <Link href="/students" style={{ color: "var(--accent)", fontWeight: 700 }}>
+            학생 관리
+          </Link>
+        </div>
       ) : (
         <>
           <label style={{ display: "block", marginBottom: 12 }}>
@@ -100,6 +131,7 @@ export default function GradePage() {
               {worksheets.map((w) => (
                 <option key={w.id} value={w.id}>
                   {w.title}
+                  {w.sectionLabel ? ` · ${w.sectionLabel}` : ""}
                 </option>
               ))}
             </select>
@@ -121,14 +153,14 @@ export default function GradePage() {
           </label>
 
           <label className="btn btn-primary" style={{ width: "100%" }}>
-            {busy ? "업로드 중…" : "촬영 / 업로드"}
+            {uploading ? "업로드 중…" : "촬영 / 업로드"}
             <input
               ref={inputRef}
               type="file"
               accept="image/*"
               capture="environment"
               hidden
-              disabled={busy}
+              disabled={uploading}
               onChange={(e) => {
                 const f = e.target.files?.[0];
                 if (f) void upload(f);
@@ -137,24 +169,46 @@ export default function GradePage() {
             />
           </label>
 
-          <p style={{ color: "#5a6570", fontSize: 14 }}>
-            업로드 직후 다음 학생을 찍을 수 있습니다. 채점은 백그라운드에서 진행됩니다.
-          </p>
+          {hint ? (
+            <p style={{ color: "var(--accent)", fontWeight: 700, fontSize: 14 }}>
+              {hint}
+            </p>
+          ) : (
+            <p style={{ color: "#5a6570", fontSize: 14 }}>
+              기울기·가로 촬영은 피하고, 한 장에 한 학습지가 들어오게 찍어 주세요.
+            </p>
+          )}
 
           <ul style={{ listStyle: "none", padding: 0, display: "grid", gap: 8 }}>
             {queue.map((q) => (
               <li key={q.submissionId} className="panel">
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: 8,
+                  }}
+                >
                   <strong>{q.studentName}</strong>
                   <span>{statusLabel(q.status)}</span>
                 </div>
                 {["done", "needs_review"].includes(q.status) ? (
                   <Link
                     href={`/review/${q.submissionId}`}
-                    style={{ display: "inline-block", marginTop: 8, color: "var(--accent)", fontWeight: 700 }}
+                    style={{
+                      display: "inline-block",
+                      marginTop: 8,
+                      color: "var(--accent)",
+                      fontWeight: 700,
+                    }}
                   >
-                    결과 보기
+                    {q.status === "needs_review" ? "확인 필요 처리" : "결과 보기"}
                   </Link>
+                ) : null}
+                {q.status === "failed" ? (
+                  <div style={{ marginTop: 8, color: "var(--danger)", fontSize: 14 }}>
+                    채점 실패 · 다시 촬영해 주세요
+                  </div>
                 ) : null}
               </li>
             ))}

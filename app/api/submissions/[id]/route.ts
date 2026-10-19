@@ -3,6 +3,7 @@ import {
   getItemResults,
   getJobForSubmission,
   getSubmission,
+  getWorksheet,
   listStudents,
 } from "@/lib/data/memory-store";
 
@@ -17,8 +18,9 @@ export async function GET(
   }
   const results = getItemResults(id);
   const job = getJobForSubmission(id);
+  const worksheet = getWorksheet(submission.worksheetId);
   const student = listStudents(submission.teacherId).find(
     (s) => s.id === submission.studentId,
   );
-  return NextResponse.json({ submission, results, job, student });
+  return NextResponse.json({ submission, results, job, student, worksheet });
 }

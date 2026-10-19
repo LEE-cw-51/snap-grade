@@ -77,7 +77,15 @@ export default function ResultsPage() {
                 {" · "}
                 <span className="badge badge-check">?{r.check}</span>
               </div>
-              <div style={{ marginTop: 4, color: "#5a6570", fontSize: 13 }}>{r.status}</div>
+              <div style={{ marginTop: 4, color: "#5a6570", fontSize: 13 }}>
+                {r.status === "needs_review"
+                  ? "확인 필요 · 탭해서 처리"
+                  : r.status === "grading" || r.status === "uploaded"
+                    ? "채점 중…"
+                    : r.status === "failed"
+                      ? "실패 · 재촬영"
+                      : "완료"}
+              </div>
             </Link>
           </li>
         ))}
