@@ -152,7 +152,9 @@ def _form_hints(original: str, normalized: str) -> dict:
     if re.search(r"\(\d+\+\d+/\d+\)", n.replace(" ", "")):
         is_mixed = True
     is_fraction_like = ("/" in n or "frac" in o.lower()) and not is_mixed
-    if re.search(r"\(\(.+\)/\(.+\)\)", n) or re.search(r"\d+/\d+", n):
+    if not is_mixed and (
+        re.search(r"\(\(.+\)/\(.+\)\)", n) or re.search(r"\d+/\d+", n)
+    ):
         is_fraction_like = True
     is_decimal = bool(re.search(r"\d+\.\d+", o)) and "/" not in n
     # product of binomials: (x+2)(x+3) without outer expand
