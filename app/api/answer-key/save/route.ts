@@ -21,6 +21,12 @@ export async function POST(req: Request) {
   if (!title || !items?.length) {
     return NextResponse.json({ error: "invalid body" }, { status: 400 });
   }
+  if (items.some((i) => !i.number || !String(i.answerLatex ?? "").trim())) {
+    return NextResponse.json(
+      { error: "empty answer not allowed" },
+      { status: 400 },
+    );
+  }
 
   const rules = formRules || FORM_PRESETS[preset] || FORM_PRESETS.DEFAULT;
   const ws = createWorksheet({
