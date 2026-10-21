@@ -8,11 +8,15 @@ import {
   updateAnswerItemLatex,
 } from "@/lib/data/provider";
 import { runGradingJob } from "@/lib/grading/run-job";
+import { assertDemoApiSecret } from "@/lib/ops/auth";
 
 export async function GET(
-  _req: Request,
+  req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
+  const denied = assertDemoApiSecret(req);
+  if (denied) return denied;
+
   const { id } = await ctx.params;
   const worksheet = await getWorksheet(id);
   if (!worksheet) {
@@ -30,6 +34,9 @@ export async function PATCH(
   req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
+  const denied = assertDemoApiSecret(req);
+  if (denied) return denied;
+
   const { id } = await ctx.params;
   const worksheet = await getWorksheet(id);
   if (!worksheet) {
@@ -49,6 +56,7 @@ export async function PATCH(
   }
 
   const jobs = [];
+  let skipped = 0;
   for (const sub of await listSubmissionsForWorksheet(id)) {
     const job = await enqueueRegrade(sub.id);
     if (job) {
@@ -56,8 +64,14 @@ export async function PATCH(
       after(async () => {
         await runGradingJob(sub.id);
       });
+    } else {
+      skipped += 1;
     }
   }
 
-  return NextResponse.json({ item, requeued: jobs.length });
+  return NextResponse.json({
+    item,
+    requeued: jobs.length,
+    skipped,
+  });
 }

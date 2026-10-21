@@ -26,6 +26,11 @@ NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<status anon key>
 SUPABASE_SERVICE_ROLE_KEY=<status service_role key>
 DEMO_TEACHER_ID=00000000-0000-4000-8000-000000000001
+# Required — blocks unauthenticated API access in supabase mode
+DEMO_API_SECRET=local-demo-secret
+# Local UI only (same value). Do not set on public/preview hosts.
+NEXT_PUBLIC_DEMO_API_SECRET=local-demo-secret
+OPS_SECRET=local-ops-secret
 ```
 
 ```bash
@@ -34,6 +39,15 @@ npm run dev
 
 시드 계정: `demo@localhost` / `demo-password` (로컬 전용).  
 학생 김민수·이서연이 `seed.sql`로 들어간다.
+
+### curl 예
+
+```bash
+curl -H "x-demo-secret: local-demo-secret" http://127.0.0.1:3000/api/worksheets
+curl -X POST -H "x-ops-secret: local-ops-secret" http://127.0.0.1:3000/api/ops/photo-sweep
+```
+
+`DEMO_API_SECRET`이 없으면 supabase 모드 API는 **503**. 헤더가 틀리면 **403**.
 
 ## 스모크
 
@@ -48,5 +62,6 @@ npm run test:supabase-smoke
 ## 주의
 
 - Preview/CI 기본은 `memory` + `mock`
-- 클라우드 Supabase Free/Pro 프로젝트는 **이 PR 범위 밖** (키·계정 세팅 단계)
+- `NEXT_PUBLIC_DEMO_API_SECRET`은 **로컬 전용**. 공개 호스트에 넣지 말 것
+- 클라우드 Supabase Free/Pro + 진짜 Auth는 **이후 단계**
 - Storage 버킷 `homework-photos`는 init migration에서 생성

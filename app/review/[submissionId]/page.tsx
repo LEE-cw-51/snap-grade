@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { apiFetch } from "@/lib/ops/client-headers";
 import { REASON_LABELS } from "@/lib/types";
 
 type Result = {
@@ -27,7 +28,7 @@ export default function ReviewPage() {
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
-    const res = await fetch(`/api/submissions/${params.submissionId}`);
+    const res = await apiFetch(`/api/submissions/${params.submissionId}`);
     const data = await res.json();
     setStudentName(data.student?.name || "학생");
     setWorksheetTitle(data.worksheet?.title || "");
@@ -54,7 +55,7 @@ export default function ReviewPage() {
     if (!activeCheck || busy) return;
     setBusy(true);
     try {
-      await fetch(`/api/submissions/${params.submissionId}/review`, {
+      await apiFetch(`/api/submissions/${params.submissionId}/review`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

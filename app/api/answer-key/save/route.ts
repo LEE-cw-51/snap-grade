@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 import { createWorksheet, demoTeacherId } from "@/lib/data/provider";
+import { assertDemoApiSecret } from "@/lib/ops/auth";
 import { FORM_PRESETS, type FormRules } from "@/lib/types";
 
 export async function POST(req: Request) {
+  const denied = assertDemoApiSecret(req);
+  if (denied) return denied;
+
   const body = await req.json();
   const {
     title,

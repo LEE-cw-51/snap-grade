@@ -6,12 +6,16 @@ import {
   updateItemResult,
   updateSubmission,
 } from "@/lib/data/provider";
+import { assertDemoApiSecret } from "@/lib/ops/auth";
 import type { FinalVerdict } from "@/lib/types";
 
 export async function POST(
   req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
+  const denied = assertDemoApiSecret(req);
+  if (denied) return denied;
+
   const { id } = await ctx.params;
   const submission = await getSubmission(id);
   if (!submission) {
@@ -33,11 +37,16 @@ export async function POST(
     return NextResponse.json({ error: "invalid verdict" }, { status: 400 });
   }
 
+  const owned = (await getItemResults(id)).find((r) => r.id === resultId);
+  if (!owned) {
+    return NextResponse.json({ error: "result not found" }, { status: 404 });
+  }
+
   const result = await updateItemResult(resultId, {
     finalVerdict: verdict,
     resolvedAt: new Date().toISOString(),
   });
-  if (!result) {
+  if (!result || result.submissionId !== id) {
     return NextResponse.json({ error: "result not found" }, { status: 404 });
   }
 

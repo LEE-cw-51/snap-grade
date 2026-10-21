@@ -8,8 +8,12 @@ import {
   listSubmissionsForWorksheet,
 } from "@/lib/data/provider";
 import { runGradingJob } from "@/lib/grading/run-job";
+import { assertDemoApiSecret } from "@/lib/ops/auth";
 
 export async function GET(req: Request) {
+  const denied = assertDemoApiSecret(req);
+  if (denied) return denied;
+
   const worksheetId = new URL(req.url).searchParams.get("worksheetId");
   if (!worksheetId) {
     return NextResponse.json({ error: "worksheetId required" }, { status: 400 });
@@ -20,6 +24,9 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  const denied = assertDemoApiSecret(req);
+  if (denied) return denied;
+
   const daily = Number(process.env.DAILY_GRADE_LIMIT || "80");
   const maxPages = Number(process.env.MAX_PAGES_PER_SUBMISSION || "2");
   const teacherId = await demoTeacherId();

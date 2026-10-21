@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { PRESET_OPTIONS, suggestPresetFromHints } from "@/lib/form-presets";
 import { resizeImageFile } from "@/lib/image/resize-client";
+import { apiFetch } from "@/lib/ops/client-headers";
 import "katex/dist/katex.min.css";
 
 type Section = {
@@ -60,7 +61,7 @@ export default function AnswerKeyPage() {
       }
       const fd = new FormData();
       fd.append("file", upload, file.name);
-      const res = await fetch("/api/answer-key/extract", {
+      const res = await apiFetch("/api/answer-key/extract", {
         method: "POST",
         body: fd,
       });
@@ -101,7 +102,7 @@ export default function AnswerKeyPage() {
     setError("");
     setMessage("");
     try {
-      const res = await fetch("/api/answer-key/save", {
+      const res = await apiFetch("/api/answer-key/save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

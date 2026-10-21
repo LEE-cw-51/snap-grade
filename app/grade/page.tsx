@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { resizeImageFile } from "@/lib/image/resize-client";
+import { apiFetch } from "@/lib/ops/client-headers";
 
 type Worksheet = { id: string; title: string; sectionLabel: string };
 type Student = { id: string; name: string; className: string };
@@ -24,8 +25,8 @@ export default function GradePage() {
 
   useEffect(() => {
     void Promise.all([
-      fetch("/api/worksheets").then((r) => r.json()),
-      fetch("/api/students").then((r) => r.json()),
+      apiFetch("/api/worksheets").then((r) => r.json()),
+      apiFetch("/api/students").then((r) => r.json()),
     ]).then(([w, s]) => {
       setWorksheets(w.worksheets || []);
       setStudents(s.students || []);
@@ -45,7 +46,7 @@ export default function GradePage() {
       });
       const studentName =
         students.find((s) => s.id === studentId)?.name || "";
-      const res = await fetch("/api/submissions", {
+      const res = await apiFetch("/api/submissions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -94,7 +95,7 @@ export default function GradePage() {
         if (["done", "needs_review", "failed"].includes(next[i].status)) {
           continue;
         }
-        const res = await fetch(`/api/submissions/${next[i].submissionId}`);
+        const res = await apiFetch(`/api/submissions/${next[i].submissionId}`);
         const data = await res.json();
         if (
           data.submission?.status &&

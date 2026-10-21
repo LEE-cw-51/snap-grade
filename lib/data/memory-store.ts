@@ -361,6 +361,13 @@ export function listSubmissionsForTeacher(teacherId: string) {
 export function enqueueRegrade(submissionId: string) {
   const sub = getSubmission(submissionId);
   if (!sub) return null;
+  if (sub.status === "uploaded" || sub.status === "grading") {
+    return null;
+  }
+  const latest = getJobForSubmission(submissionId);
+  if (latest && (latest.status === "queued" || latest.status === "running")) {
+    return null;
+  }
   const job: GradingJob = {
     id: randomUUID(),
     submissionId,

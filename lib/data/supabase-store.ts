@@ -244,9 +244,11 @@ export async function findActiveSubmission(
     .eq("worksheet_id", worksheetId)
     .eq("student_id", studentId)
     .in("status", ["uploaded", "grading"])
-    .maybeSingle();
+    .order("created_at", { ascending: false })
+    .limit(1);
   if (error) throw error;
-  return data ? mapSubmission(data, null) : null;
+  const row = data?.[0];
+  return row ? mapSubmission(row, null) : null;
 }
 
 export async function getJobForSubmission(
@@ -493,6 +495,13 @@ export async function enqueueRegrade(
 ): Promise<GradingJob | null> {
   const sub = await getSubmission(submissionId);
   if (!sub) return null;
+  if (sub.status === "uploaded" || sub.status === "grading") {
+    return null;
+  }
+  const latest = await getJobForSubmission(submissionId);
+  if (latest && (latest.status === "queued" || latest.status === "running")) {
+    return null;
+  }
   const sb = getServiceClient();
   const { data: job, error } = await sb
     .from("grading_jobs")

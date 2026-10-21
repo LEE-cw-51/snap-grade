@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { apiFetch } from "@/lib/ops/client-headers";
 
 type Worksheet = {
   id: string;
@@ -14,7 +15,7 @@ export default function HomePage() {
   const [worksheets, setWorksheets] = useState<Worksheet[]>([]);
 
   useEffect(() => {
-    fetch("/api/worksheets")
+    apiFetch("/api/worksheets")
       .then((r) => r.json())
       .then((d) => setWorksheets(d.worksheets || []));
   }, []);

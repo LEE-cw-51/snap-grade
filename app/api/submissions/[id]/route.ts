@@ -6,11 +6,15 @@ import {
   getWorksheet,
   listStudents,
 } from "@/lib/data/provider";
+import { assertDemoApiSecret } from "@/lib/ops/auth";
 
 export async function GET(
-  _req: Request,
+  req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
+  const denied = assertDemoApiSecret(req);
+  if (denied) return denied;
+
   const { id } = await ctx.params;
   const submission = await getSubmission(id);
   if (!submission) {

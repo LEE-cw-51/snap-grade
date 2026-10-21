@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { apiFetch } from "@/lib/ops/client-headers";
 
 type Row = {
   submissionId: string;
@@ -30,11 +31,11 @@ export default function ResultsPage() {
 
   const load = useCallback(async () => {
     const [subsData, studentsData, wsData] = await Promise.all([
-      fetch(`/api/submissions?worksheetId=${params.worksheetId}`).then((r) =>
+      apiFetch(`/api/submissions?worksheetId=${params.worksheetId}`).then((r) =>
         r.json(),
       ),
-      fetch("/api/students").then((r) => r.json()),
-      fetch(`/api/worksheets/${params.worksheetId}`).then((r) => r.json()),
+      apiFetch("/api/students").then((r) => r.json()),
+      apiFetch(`/api/worksheets/${params.worksheetId}`).then((r) => r.json()),
     ]);
     const studentMap = new Map(
       (studentsData.students || []).map((s: { id: string; name: string }) => [
@@ -45,7 +46,7 @@ export default function ResultsPage() {
 
     const next: Row[] = [];
     for (const sub of subsData.submissions || []) {
-      const detail = await fetch(`/api/submissions/${sub.id}`).then((r) =>
+      const detail = await apiFetch(`/api/submissions/${sub.id}`).then((r) =>
         r.json(),
       );
       const results = detail.results || [];
@@ -81,7 +82,7 @@ export default function ResultsPage() {
 
   async function saveKeyFix(itemId: string) {
     setMessage("");
-    const res = await fetch(`/api/worksheets/${params.worksheetId}`, {
+    const res = await apiFetch(`/api/worksheets/${params.worksheetId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ itemId, answerLatex: fix[itemId] }),

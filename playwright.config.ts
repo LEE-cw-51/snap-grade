@@ -29,6 +29,7 @@ export default defineConfig({
       DATA_PROVIDER: "memory",
       VISION_PROVIDER: "mock",
       ALLOW_E2E_RESET: "1",
+      OPS_SECRET: process.env.OPS_SECRET || "e2e-ops",
       DAILY_GRADE_LIMIT: "2",
       MAX_PAGES_PER_SUBMISSION: "2",
       PORT: String(port),

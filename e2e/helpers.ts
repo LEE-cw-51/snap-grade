@@ -7,8 +7,12 @@ export const FIXTURE = path.join(
   "sample-worksheet.png",
 );
 
+export const OPS_SECRET = process.env.OPS_SECRET || "e2e-ops";
+
 export async function resetStore(request: APIRequestContext) {
-  const res = await request.post("/api/ops/reset");
+  const res = await request.post("/api/ops/reset", {
+    headers: { "x-ops-secret": OPS_SECRET },
+  });
   expect(res.ok()).toBeTruthy();
 }
 

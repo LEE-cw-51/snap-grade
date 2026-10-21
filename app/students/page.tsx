@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { apiFetch } from "@/lib/ops/client-headers";
 
 type Student = { id: string; name: string; className: string };
 
@@ -11,7 +12,7 @@ export default function StudentsPage() {
   const [className, setClassName] = useState("초4-A");
 
   async function load() {
-    const res = await fetch("/api/students");
+    const res = await apiFetch("/api/students");
     const data = await res.json();
     setStudents(data.students || []);
   }
@@ -22,7 +23,7 @@ export default function StudentsPage() {
 
   async function add() {
     if (!name.trim()) return;
-    await fetch("/api/students", {
+    await apiFetch("/api/students", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, className }),
