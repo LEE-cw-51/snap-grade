@@ -47,12 +47,14 @@ def normalize(raw: str) -> str:
     s = s.replace("\\,", "").replace("\\;", "").replace("\\!", "")
     s = s.replace("\\{", "{").replace("\\}", "}")
     s = s.replace("$", "")
-    # mixed number: 1 3/4 or 1\frac{3}{4}
-    s = re.sub(r"(\d+)\s+FRAC\s*\{", r"\1+FRAC{", s)
+    # mixed number: 1 3/4 or 1\frac{3}{4} (space optional before frac)
+    s = re.sub(r"(\d+)\s*FRAC\s*\{", r"\1+FRAC{", s)
     s = re.sub(r"(\d+)\s+(\d+)\s*/\s*(\d+)", r"(\1+\2/\3)", s)
     # restore FRAC/SQRT to latex-like for parser
     s = _restore_frac(s)
     s = _restore_sqrt(s)
+    # bare sqrt12 / sqrt 12 from unicode √12 → sqrt(12)
+    s = re.sub(r"\bsqrt\s*(\d+)\b", r"sqrt(\1)", s)
     # remainder: 3 ... 2 / 3…2 / 3 나머지 2
     s = re.sub(r"(\d+)\s*(?:\.\.\.|…|⋯)\s*(\d+)", r"REM(\1,\2)", s)
     s = re.sub(r"(\d+)\s*나머지\s*(\d+)", r"REM(\1,\2)", s)
