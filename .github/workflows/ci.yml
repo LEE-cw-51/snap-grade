@@ -34,6 +34,8 @@ jobs:
           npm ci
           python3 -m pip install -r python/grader/requirements.txt
           npx playwright install chromium --with-deps
+      - name: Supabase mapper smoke
+        run: npm run test:supabase-smoke
       - name: Playwright mock E2E
         run: npm run test:e2e
         env:

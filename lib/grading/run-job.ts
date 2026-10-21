@@ -4,12 +4,13 @@ import {
   flagKeyErrors,
   getAnswerItems,
   getJobForSubmission,
+  getPhotoDataUrl,
   getSubmission,
   getWorksheet,
   replaceItemResults,
   updateJob,
   updateSubmission,
-} from "@/lib/data/memory-store";
+} from "@/lib/data/provider";
 import { compareAnswers, computeFromProblem } from "@/lib/grader/client";
 import type { AutoVerdict, ItemResult } from "@/lib/types";
 import { getVisionReader } from "@/lib/vision";
@@ -18,31 +19,32 @@ const threshold = () =>
   Number(process.env.READ_CONFIDENCE_THRESHOLD || "0.8");
 
 export async function runGradingJob(submissionId: string): Promise<void> {
-  const submission = getSubmission(submissionId);
-  const job = getJobForSubmission(submissionId);
+  const submission = await getSubmission(submissionId);
+  const job = await getJobForSubmission(submissionId);
   if (!submission || !job) return;
 
   if (job.attempts >= 2) return;
 
-  updateJob(job.id, {
+  await updateJob(job.id, {
     status: "running",
     attempts: job.attempts + 1,
     startedAt: new Date().toISOString(),
     lastError: null,
   });
-  updateSubmission(submissionId, { status: "grading" });
+  await updateSubmission(submissionId, { status: "grading" });
 
   try {
-    const worksheet = getWorksheet(submission.worksheetId);
+    const worksheet = await getWorksheet(submission.worksheetId);
     if (!worksheet) throw new Error("worksheet missing");
-    const answers = getAnswerItems(worksheet.id);
+    const answers = await getAnswerItems(worksheet.id);
     const answerMap = new Map(answers.map((a) => [a.number, a]));
 
     const vision = getVisionReader();
-    const extracted = await vision.extractHomework(
-      submission.photoDataUrl || "",
-      "image/jpeg",
-    );
+    const photoUrl =
+      submission.photoDataUrl ||
+      (await getPhotoDataUrl(submission.photoPath)) ||
+      "";
+    const extracted = await vision.extractHomework(photoUrl, "image/jpeg");
 
     const results: ItemResult[] = [];
     let needsReview = false;
@@ -98,37 +100,41 @@ export async function runGradingJob(submissionId: string): Promise<void> {
       });
     }
 
-    replaceItemResults(submissionId, results);
-    updateSubmission(submissionId, {
+    await replaceItemResults(submissionId, results);
+    await updateSubmission(submissionId, {
       status: needsReview ? "needs_review" : "done",
     });
-    updateJob(job.id, {
+    await updateJob(job.id, {
       status: "done",
       finishedAt: new Date().toISOString(),
     });
 
     if (!needsReview) {
-      deletePhoto(submission.photoPath);
-      updateSubmission(submissionId, { photoPath: null, photoDataUrl: null });
+      await deletePhoto(submission.photoPath);
+      await updateSubmission(submissionId, {
+        photoPath: null,
+        photoDataUrl: null,
+      });
     }
 
-    flagKeyErrors(submission.worksheetId);
+    await flagKeyErrors(submission.worksheetId);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    const attempts = (getJobForSubmission(submissionId)?.attempts ?? 1);
+    const attempts =
+      (await getJobForSubmission(submissionId))?.attempts ?? 1;
     if (attempts < 2) {
-      updateJob(job.id, {
+      await updateJob(job.id, {
         status: "queued",
         lastError: message,
       });
       await runGradingJob(submissionId);
       return;
     }
-    updateJob(job.id, {
+    await updateJob(job.id, {
       status: "failed",
       lastError: message,
       finishedAt: new Date().toISOString(),
     });
-    updateSubmission(submissionId, { status: "failed" });
+    await updateSubmission(submissionId, { status: "failed" });
   }
 }

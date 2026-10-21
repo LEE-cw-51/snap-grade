@@ -9,7 +9,8 @@
     "lint": "eslint",
     "test:grader": "cd python/grader && python3 -m pytest -q",
     "test:e2e": "playwright test",
-    "test": "npm run test:grader && npm run test:e2e"
+    "test:supabase-smoke": "node scripts/supabase-smoke.mjs",
+    "test": "npm run test:grader && npm run test:supabase-smoke && npm run test:e2e"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

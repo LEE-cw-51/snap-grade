@@ -6,7 +6,7 @@ import {
   demoTeacherId,
   findActiveSubmission,
   listSubmissionsForWorksheet,
-} from "@/lib/data/memory-store";
+} from "@/lib/data/provider";
 import { runGradingJob } from "@/lib/grading/run-job";
 
 export async function GET(req: Request) {
@@ -15,14 +15,14 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "worksheetId required" }, { status: 400 });
   }
   return NextResponse.json({
-    submissions: listSubmissionsForWorksheet(worksheetId),
+    submissions: await listSubmissionsForWorksheet(worksheetId),
   });
 }
 
 export async function POST(req: Request) {
   const daily = Number(process.env.DAILY_GRADE_LIMIT || "80");
   const maxPages = Number(process.env.MAX_PAGES_PER_SUBMISSION || "2");
-  const teacherId = demoTeacherId();
+  const teacherId = await demoTeacherId();
   const body = await req.json();
   const { worksheetId, studentId, photoDataUrl, pageCount = 1 } = body as {
     worksheetId: string;
@@ -46,7 +46,7 @@ export async function POST(req: Request) {
     );
   }
 
-  if (countTodaySubmissions(teacherId) >= daily) {
+  if ((await countTodaySubmissions(teacherId)) >= daily) {
     return NextResponse.json(
       {
         error: "daily_limit",
@@ -57,7 +57,7 @@ export async function POST(req: Request) {
     );
   }
 
-  if (findActiveSubmission(worksheetId, studentId)) {
+  if (await findActiveSubmission(worksheetId, studentId)) {
     return NextResponse.json(
       {
         error: "already_grading",
@@ -67,7 +67,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const { submission, job } = createSubmission({
+  const { submission, job } = await createSubmission({
     teacherId,
     worksheetId,
     studentId,

@@ -6,7 +6,7 @@ import {
   getWorksheet,
   listSubmissionsForWorksheet,
   updateAnswerItemLatex,
-} from "@/lib/data/memory-store";
+} from "@/lib/data/provider";
 import { runGradingJob } from "@/lib/grading/run-job";
 
 export async function GET(
@@ -14,11 +14,11 @@ export async function GET(
   ctx: { params: Promise<{ id: string }> },
 ) {
   const { id } = await ctx.params;
-  const worksheet = getWorksheet(id);
+  const worksheet = await getWorksheet(id);
   if (!worksheet) {
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }
-  const items = getAnswerItems(id);
+  const items = await getAnswerItems(id);
   return NextResponse.json({
     worksheet,
     items,
@@ -26,13 +26,12 @@ export async function GET(
   });
 }
 
-/** Fix a suspected answer-key item and re-queue grading for that worksheet. */
 export async function PATCH(
   req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
   const { id } = await ctx.params;
-  const worksheet = getWorksheet(id);
+  const worksheet = await getWorksheet(id);
   if (!worksheet) {
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }
@@ -44,14 +43,14 @@ export async function PATCH(
   if (!itemId || !String(answerLatex ?? "").trim()) {
     return NextResponse.json({ error: "invalid body" }, { status: 400 });
   }
-  const item = updateAnswerItemLatex(itemId, answerLatex);
+  const item = await updateAnswerItemLatex(itemId, answerLatex);
   if (!item || item.worksheetId !== id) {
     return NextResponse.json({ error: "item not found" }, { status: 404 });
   }
 
   const jobs = [];
-  for (const sub of listSubmissionsForWorksheet(id)) {
-    const job = enqueueRegrade(sub.id);
+  for (const sub of await listSubmissionsForWorksheet(id)) {
+    const job = await enqueueRegrade(sub.id);
     if (job) {
       jobs.push(job);
       after(async () => {

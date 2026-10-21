@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createWorksheet, demoTeacherId } from "@/lib/data/memory-store";
+import { createWorksheet, demoTeacherId } from "@/lib/data/provider";
 import { FORM_PRESETS, type FormRules } from "@/lib/types";
 
 export async function POST(req: Request) {
@@ -29,14 +29,13 @@ export async function POST(req: Request) {
   }
 
   const rules = formRules || FORM_PRESETS[preset] || FORM_PRESETS.DEFAULT;
-  const ws = createWorksheet({
-    teacherId: demoTeacherId(),
+  const ws = await createWorksheet({
+    teacherId: await demoTeacherId(),
     title,
     sectionLabel: sectionLabel || "",
     formRules: rules,
     items,
   });
 
-  // Answer-key originals are never persisted in memory mode (deleted immediately).
   return NextResponse.json({ worksheet: ws, originalDeleted: true });
 }

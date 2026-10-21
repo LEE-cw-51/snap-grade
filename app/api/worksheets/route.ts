@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { demoTeacherId, listWorksheets } from "@/lib/data/memory-store";
+import { demoTeacherId, listWorksheets } from "@/lib/data/provider";
 
 export async function GET() {
-  const teacherId = demoTeacherId();
-  return NextResponse.json({ worksheets: listWorksheets(teacherId) });
+  const teacherId = await demoTeacherId();
+  return NextResponse.json({ worksheets: await listWorksheets(teacherId) });
 }
