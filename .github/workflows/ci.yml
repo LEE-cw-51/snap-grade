@@ -1,0 +1,45 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  grader:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install grader deps
+        run: python3 -m pip install -r python/grader/requirements.txt
+      - name: SymPy tests
+        run: npm run test:grader
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          npm ci
+          python3 -m pip install -r python/grader/requirements.txt
+          npx playwright install chromium --with-deps
+      - name: Playwright mock E2E
+        run: npm run test:e2e
+        env:
+          CI: "1"
+          DATA_PROVIDER: memory
+          VISION_PROVIDER: mock
+          ALLOW_E2E_RESET: "1"
+          DAILY_GRADE_LIMIT: "2"
+          MAX_PAGES_PER_SUBMISSION: "2"

@@ -26,34 +26,48 @@ declare global {
   var __snapMemoryStore: Store | undefined;
 }
 
+function seedStudents(): Student[] {
+  const now = new Date().toISOString();
+  return [
+    {
+      id: "stu-1",
+      teacherId: DEMO_TEACHER,
+      name: "김민수",
+      className: "초4-A",
+      createdAt: now,
+    },
+    {
+      id: "stu-2",
+      teacherId: DEMO_TEACHER,
+      name: "이서연",
+      className: "초4-A",
+      createdAt: now,
+    },
+  ];
+}
+
+function emptyStore(): Store {
+  return {
+    students: seedStudents(),
+    worksheets: [],
+    answerItems: [],
+    submissions: [],
+    itemResults: [],
+    gradingJobs: [],
+    photos: new Map(),
+  };
+}
+
 function store(): Store {
   if (!globalThis.__snapMemoryStore) {
-    globalThis.__snapMemoryStore = {
-      students: [
-        {
-          id: "stu-1",
-          teacherId: DEMO_TEACHER,
-          name: "김민수",
-          className: "초4-A",
-          createdAt: new Date().toISOString(),
-        },
-        {
-          id: "stu-2",
-          teacherId: DEMO_TEACHER,
-          name: "이서연",
-          className: "초4-A",
-          createdAt: new Date().toISOString(),
-        },
-      ],
-      worksheets: [],
-      answerItems: [],
-      submissions: [],
-      itemResults: [],
-      gradingJobs: [],
-      photos: new Map(),
-    };
+    globalThis.__snapMemoryStore = emptyStore();
   }
   return globalThis.__snapMemoryStore;
+}
+
+/** Demo/E2E only: wipe in-memory state back to seed students. */
+export function resetMemoryStore() {
+  globalThis.__snapMemoryStore = emptyStore();
 }
 
 export function demoTeacherId() {
